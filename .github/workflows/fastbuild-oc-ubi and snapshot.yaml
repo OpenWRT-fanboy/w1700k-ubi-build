@@ -43,6 +43,19 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Download artifact
+      uses: dawidd6/action-download-artifact@v18
+      with:
+        workflow: extract-distfeeds.yaml
+        skip_unpack: true
+
+    - name: Manipulate artifact
+      run: |
+        mv distfeeds.list.zip distfeeds.list
+        mkdir -p ./user/default/files/etc/apk/repositories.d
+        cp distfeeds.list ./user/default/files/etc/apk/repositories.d/
+        sed -n 's/.*6.12.*-*-\([^/]*\).*/\1/p' distfeeds.list > ./user/default/files/etc/vermagic.txt
+
     - name: 1. Init build env
       run: scripts/cisteps/build-openwrt/01-init_env.sh
 
@@ -113,7 +126,7 @@ jobs:
           gh release delete "$VERSION" --cleanup-tag -y
         fi
         # Create the new release
-        FILES_TO_UPLOAD=$(find ./openwrt_firmware -maxdepth 1 -type f -name "*.itb")
+        FILES_TO_UPLOAD=$(find ./openwrt_firmware -maxdepth 1 -type f -name "*sysupgrade.itb")
         gh release create "$VERSION" $FILES_TO_UPLOAD \
           --title "$VERSION"
 

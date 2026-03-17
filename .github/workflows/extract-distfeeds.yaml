@@ -1,0 +1,31 @@
+name: extract-distfeeds
+
+on:
+  schedule:
+    # Run at minute 45 of every 6th hour (00:00, 06:00, 12:00, 18:00 UTC)
+    - cron: '45 */6 * * *'
+  workflow_dispatch:
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:  
+  extract:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Install binwalk
+        run: |
+          sudo apt install -y binwalk
+      - name: Download and extract
+        run: |
+          curl https://downloads.openwrt.org/snapshots/targets/airoha/an7581/openwrt-airoha-an7581-airoha_an7581-evb-squashfs-sysupgrade.bin --output sysupgrade.bin
+          binwalk -e sysupgrade.bin
+      - name: Prepare artifact
+        run: |
+          mkdir artifact
+          cp _sysupgrade.bin.extracted/squashfs-root/etc/apk/repositories.d/distfeeds.list .
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          path: distfeeds.list
+          archive: false
