@@ -1,4 +1,4 @@
-name: fastbuild bridger, oc-ubi, snapshot
+name: fastbuild test, oc-ubi, snapshot
 
 on:
   workflow_dispatch:
@@ -28,7 +28,7 @@ jobs:
           - normal
         # ########### Add your target name below ###########
         # E.g. target: [x86_64, wdr4310v1]
-        target: [bridger, minimal-oc-ubi, SNAPSHOT]
+        target: [test, minimal-oc-ubi, SNAPSHOT]
         include:
         - mode: normal
           title: Build
