@@ -10,18 +10,32 @@ env:
 
 jobs:
   build:
+    name: ${{matrix.title}} ${{matrix.target}}
+    runs-on: ubuntu-24.04-arm
+    # For `github.event`'s structure, see: https://developer.github.com/v3/activity/events/types/
+    # Do not modify the trigger methods here, customize them in the `on` section
+    if: |
+      github.event_name == 'push'
+      || github.event_name == 'repository_dispatch'
+      || github.event_name == 'workflow_dispatch'
+      || github.event_name == 'deployment'
+      || (github.event_name == 'watch' && github.event.action == 'started' && github.event.repository.owner.id == github.event.sender.id)
+      || github.event_name == 'schedule'
     strategy:
+      fail-fast: false
       matrix:
-        # Define the different runners you want to use
-        os: [ubuntu-24.04-arm]
-    runs-on: ${{ matrix.os }}
-    name: "Build on ${{ matrix.os }}"
-
+        mode:
+          - normal
+        # ########### Add your target name below ###########
+        # E.g. target: [x86_64, wdr4310v1]
+        target: [test, minimal-oc-ubi, SNAPSHOT]
+        include:
+        - mode: normal
+          title: Build
     env:
       HOST_WORK_DIR: ${{github.workspace}}
-      BUILD_MODE: normal
-      BUILD_TARGET: baseline
-      BUILDER_TAG: ${{ matrix.os }}
+      BUILD_MODE: ${{matrix.mode}}
+      BUILD_TARGET: ${{matrix.target}}
 
     steps:
     - name: Checkout
@@ -100,6 +114,21 @@ jobs:
       id: organize
       if: env.SKIP_TARGET == '0' && !cancelled()
       run: scripts/cisteps/build-openwrt/13-organize_files.sh
+
+    - name: Create Release
+      if: env.SKIP_TARGET == '0' && env.TEST != '1' && env.OPT_PACKAGE_ONLY != '1' && steps.organize.outputs.status == 'success' && !cancelled()
+      run: |
+        # Extract version code from profiles.json
+        version_code=$(jq -r '.version_code' ./openwrt_firmware/profiles.json)
+        VERSION="${{matrix.target}}-$(date +'%Y.%m.%d')-${version_code}"
+        # Check if the release already exists
+        if gh release view "$VERSION" &>/dev/null; then
+          gh release delete "$VERSION" --cleanup-tag -y
+        fi
+        # Create the new release
+        FILES_TO_UPLOAD=$(find ./openwrt_firmware -maxdepth 1 -type f -name "*sysupgrade.itb")
+        gh release create "$VERSION" $FILES_TO_UPLOAD \
+          --title "$VERSION"
 
     - name: 14. Upload builder
       if: |
