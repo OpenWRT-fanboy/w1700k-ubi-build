@@ -1,4 +1,4 @@
-name: sync-branches-to-AUTO
+name: sync-minimal-branches-to-AUTO
 
 on:
   workflow_dispatch:
@@ -30,3 +30,6 @@ jobs:
           git config user.email github-actions[bot]@users.noreply.github.com
           git switch -c ${{ matrix.environment }}
           git push --set-upstream origin ${{ matrix.environment }} --force-with-lease
+          git switch -c minimal-ubi
+          git reset --hard HEAD~1
+          git push --set-upstream origin minimal-ubi --force-with-lease
